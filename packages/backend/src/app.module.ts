@@ -1,13 +1,24 @@
 import { Module } from '@nestjs/common';
-
-import { ConfigModule } from '@nestjs/config';
-import { DBService } from './db/db.service';
-import { DBModule } from './db/db.module';
-import { HelloWorldModule } from './hello-world/hello-world.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), DBModule, HelloWorldModule],
-  controllers: [],
-  providers: [DBService],
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'postgres',
+      database: 'ssg',
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: true,
+    }),
+    AuthModule,
+    UsersModule,
+    TasksModule,
+  ],
 })
 export class AppModule {}

@@ -1,8 +1,8 @@
-import { FunctionComponent, PropsWithChildren } from "react";
-import { useAuthContext } from "@/context/AuthContext";
-import { USER_APP_ROUTES } from "@/routing/routes";
-import { useRoute } from "@/routing/useRoute";
-import { SignInComponent } from "@/components/common/SignInComponent";
+import { FunctionComponent, PropsWithChildren } from 'react';
+import { useAuthContext } from '@/context/auth-context';
+import { USER_APP_ROUTES } from '@/routing/routes';
+import { useRoute } from '@/routing/useRoute';
+import { SignIn } from '@/components/sign-in';
 
 type Props = {};
 
@@ -23,7 +23,7 @@ export const AppSignInView: FunctionComponent<
       <h2 className="text-3xl font-bold text-center mb-4">
         Sign in to your account
       </h2>
-      <SignInComponent />
+      <SignIn />
     </div>
   );
 };

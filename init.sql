@@ -1,47 +1,37 @@
 -- init.sql
--- This script will be executed automatically when the PostgreSQL container is first created.
--- Use this file to initialize your database schema, create tables, insert initial data, etc.
--- Create a sample table
-CREATE TABLE IF NOT EXISTS users (
+-- Bu dosya, PostgreSQL konteyneri ilk oluşturulduğunda otomatik olarak çalıştırılacaktır.
+-- Kullanıcılar tablosunu oluştur
+CREATE TABLE IF NOT EXISTS user(
   id SERIAL PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
+  fullname VARCHAR(50) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert some sample data
+-- Örnek kullanıcı verisi ekleyin
 INSERT INTO
-  users (username, email)
+  user(fullname, email, password)
 VALUES
-  ('john_doe', 'john@example.com'),
-  ('jane_smith', 'jane@example.com')
-ON CONFLICT (username) DO NOTHING;
+  ('john_doe', 'john@example.com', 'password123'),
+  ('jane_smith', 'jane@example.com', 'password456')
+ON CONFLICT (email) DO NOTHING;
 
--- Create another sample table
-CREATE TABLE IF NOT EXISTS posts (
+-- Görevler tablosunu oluştur
+CREATE TABLE IF NOT EXISTS task (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users (id),
-  title VARCHAR(100) NOT NULL,
-  content TEXT,
+  user_id INTEGER REFERENCES user(id),
+  description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert sample posts
+-- Örnek görev verisi ekleyin
 INSERT INTO
-  posts (user_id, title, content)
+  task (user_id, description)
 VALUES
-  (
-    1,
-    'First Post',
-    'This is the content of the first post.'
-  ),
+  (1, 'This is the description of the first task.'),
   (
     2,
-    'Introduction',
-    'Hello, this is my first post on the platform!'
+    'Hello, this is my first task on the platform!'
   )
 ON CONFLICT DO NOTHING;
-
--- Add any other initialization SQL statements here
--- For example: creating more tables, inserting initial data, setting up functions or triggers, etc.
--- Remember to replace these placeholder examples with your actual schema and initial data as needed.

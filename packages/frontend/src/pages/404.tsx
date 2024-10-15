@@ -7,7 +7,7 @@ const Custom404: NextPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to a custom route, e.g., the homepage
+    // Redirect to the default path (e.g., the homepage)
     router.replace(PUBLIC_WEBSITE_ROUTES.getDefaultPath());
   }, [router]);
 
