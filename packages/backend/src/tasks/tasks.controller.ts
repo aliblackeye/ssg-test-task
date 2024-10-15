@@ -21,10 +21,8 @@ export class TasksController {
   @Post('create')
   async createTask(
     @Body() body: { description: string; ownerIds: number[] },
-    @Request() req,
   ): Promise<TaskDto> {
-    const ownerIds = [...new Set([...body.ownerIds, req.user.userId])];
-    return this.tasksService.createTask(body.description, ownerIds);
+    return this.tasksService.createTask(body.description, body.ownerIds);
   }
 
   @Delete(':id')

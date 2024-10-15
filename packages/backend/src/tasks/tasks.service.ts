@@ -22,14 +22,16 @@ export class TasksService {
         created_at
     `;
 
-    // Task sahiplerini ekle
-    await sql`
-      INSERT INTO
-        task_owners (task_id, user_id)
-      SELECT
-        ${newTask.id},
-        unnest(${ownerIds}::INT[])
-    `;
+    // Sadece body'den gelen ownerIds kullanılarak sahipleri ekle
+    if (ownerIds.length > 0) {
+      await sql`
+        INSERT INTO
+          task_owners (task_id, user_id)
+        SELECT
+          ${newTask.id},
+          unnest(${ownerIds}::INT[])
+      `;
+    }
 
     // Sahipleri getir
     const owners = await sql`

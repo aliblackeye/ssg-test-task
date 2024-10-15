@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, InternalServerErrorException } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -7,7 +7,11 @@ export class UsersController {
 
   @Get()
   async findAll() {
-    // Tüm kullanıcıları döndürür
-    return await this.usersService.findAll();
+    try {
+      return await this.usersService.findAll(); // Tüm kullanıcıları döndürür
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw new InternalServerErrorException('Could not fetch users');
+    }
   }
 }
