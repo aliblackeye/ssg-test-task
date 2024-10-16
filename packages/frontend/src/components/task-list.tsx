@@ -41,7 +41,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import Cookies from 'js-cookie'; // js-cookie kütüphanesini ekleyin
 import { useRouter } from 'next/router';
 import { useAuthContext } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast'; // useToast hook'unu import ettik
@@ -54,7 +53,7 @@ interface Task {
 }
 
 export const TaskList = () => {
-  const { userId } = useAuthContext(); // Kullanıcı ID'sini AuthContext'ten al
+  const { user } = useAuthContext(); // Kullanıcı ID'sini AuthContext'ten al
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showOwnedOnly, setShowOwnedOnly] = useState(false); // Checkbox durumu
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -146,7 +145,9 @@ export const TaskList = () => {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          {task.owners.some((owner) => owner.id === userId) ? ( // Kullanıcı ID'si kontrolü
+                          {task.owners.some(
+                            (owner) => owner.id === user?.id,
+                          ) ? ( // Kullanıcı ID'si kontrolü
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="icon">

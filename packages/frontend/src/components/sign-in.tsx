@@ -24,7 +24,7 @@ interface SignInFormData {
 
 export const SignIn = () => {
   const { register, handleSubmit } = useForm<SignInFormData>();
-  const { setUserId } = useAuthContext();
+  const { setUser } = useAuthContext();
   const [error] = useState('');
   const router = useRouter();
 
@@ -35,10 +35,8 @@ export const SignIn = () => {
         password: data.password,
       });
 
-      console.log('API Response:', response.data); // Yanıtı konsola yazdır
-
       // Eğer backend cookie'yi ayarlıyorsa, burada başka bir işlem yapmanıza gerek yok
-      setUserId(response.data.id); // Kullanıcıyı ayarlayın
+      setUser(response.data); // Kullanıcıyı ayarlayın
       router.push('/');
       router.reload();
     } catch (err) {

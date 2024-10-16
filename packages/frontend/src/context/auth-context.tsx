@@ -6,18 +6,17 @@ import {
   useEffect,
 } from 'react';
 import { useRouter } from 'next/router';
-import axios from 'axios';
 import axiosClient from '@/utils/axiosClient';
 
 interface AuthContextProps {
-  userId: number | null; // Kullanıcı ID'sini ekleyin
-  setUserId: (id: number | null) => void; // Kullanıcı ID'sini ayarlamak için fonksiyon
+  user?: any; // Kullanıcı ID'sini ekleyin
+  setUser: (user: any) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [userId, setUserId] = useState<number | null>(null); // Kullanıcı ID'sini saklamak için state
+  const [user, setUser] = useState<number | null>(null); // Kullanıcı ID'sini saklamak için state
   const [isFetched, setIsFetched] = useState(false);
   const router = useRouter();
 
@@ -27,23 +26,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const response = await axiosClient.get('/auth/me', {
           withCredentials: true, // Cookie'leri göndermek için bu ayarı ekliyoruz
         });
-        setUserId(response.data.id); // Kullanıcı ID'sini ayarla
+        setUser(response.data); // Kullanıcı ID'sini ayarla
         setIsFetched(true); // Kullanıcı bilgileri alındı
       } catch (error) {
         console.error('User authentication failed:', error); // Hata logu
-        setUserId(null);
-        router.push('/sign-in'); // Kullanıcıyı sign-in sayfasına yönlendir
+        setUser(null);
+        router.replace('/sign-in');
       }
     };
 
     // Eğer kullanıcı bilgileri mevcut değilse ve henüz fetch edilmediyse fetchUser'ı çağır
-    if (!isFetched) {
+    if (!isFetched && !user) {
       fetchUser();
     }
   }, []); // user state'ini bağımlılık olarak ekleyin
 
   return (
-    <AuthContext.Provider value={{ userId, setUserId }}>
+    <AuthContext.Provider value={{ user, setUser }}>
       {children}
     </AuthContext.Provider>
   );

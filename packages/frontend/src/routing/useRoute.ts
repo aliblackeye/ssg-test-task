@@ -11,17 +11,23 @@ interface RouteOptions {
 
 export const useRoute = (options: RouteOptions) => {
   const router = useRouter();
-  const { userId } = useAuthContext();
+  const { user } = useAuthContext();
 
   useEffect(() => {
-    if (options && options.redirect.onCondition && userId) {
+    if (options && options.redirect.onCondition && user?.id) {
       if (options.redirect.toDefaultAuthenticatedPath) {
         router.push('/'); // Varsayılan yönlendirme yolu
       }
     }
 
-    if (options && !options.redirect.onCondition && !userId) {
+    if (
+      options &&
+      !options.redirect.onCondition &&
+      !user?.id &&
+      router.pathname !== '/sign-up' &&
+      router.pathname !== '/sign-in' // sign-in sayfasına yönlendirmeyi engelle
+    ) {
       router.push('/sign-in'); // Giriş yapmamış kullanıcıyı sign-in sayfasına yönlendiriyoruz
     }
-  }, [userId, options, router]);
+  }, [user?.id, options, router]);
 };

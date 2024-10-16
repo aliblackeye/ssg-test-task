@@ -25,7 +25,7 @@ interface SignUpFormData {
 
 export const SignUp = () => {
   const { register, handleSubmit } = useForm<SignUpFormData>();
-  const { setUserId } = useAuthContext();
+  const { setUser } = useAuthContext();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -42,7 +42,7 @@ export const SignUp = () => {
 
       if (access_token) {
         Cookies.set('access_token', access_token, { expires: 1 });
-        setUserId(response.data.id);
+        setUser(response.data);
         router.push('/tasks');
         toast({
           // Başarılı kayıt bildirim
