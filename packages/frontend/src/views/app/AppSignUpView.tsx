@@ -1,6 +1,5 @@
 import { FunctionComponent, PropsWithChildren } from 'react';
 import { useAuthContext } from '@/context/auth-context';
-import { USER_APP_ROUTES } from '@/routing/routes';
 import { useRoute } from '@/routing/useRoute';
 import { SignUp } from '@/components/sign-up';
 
@@ -11,7 +10,7 @@ export const AppSignUpView: FunctionComponent<
 > = ({}) => {
   const { user } = useAuthContext();
 
-  useRoute(USER_APP_ROUTES, {
+  useRoute({
     redirect: {
       onCondition: !!user,
       toDefaultAuthenticatedPath: true,

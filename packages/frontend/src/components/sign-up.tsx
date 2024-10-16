@@ -1,7 +1,5 @@
 import { useForm } from 'react-hook-form';
-import axios from 'axios';
 import { useAuthContext } from '@/context/auth-context';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/router';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Cookies from 'js-cookie'; // js-cookie kütüphanesini ekleyin
+import axiosClient from '@/utils/axiosClient';
 
 interface SignUpFormData {
   fullname: string;
@@ -25,30 +25,30 @@ interface SignUpFormData {
 
 export const SignUp = () => {
   const { register, handleSubmit } = useForm<SignUpFormData>();
-  const { setUser, user } = useAuthContext();
+  const { setUserId } = useAuthContext();
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      router.push('/tasks');
-    }
-  }, [user, router]);
-
   const onSubmit = async (data: SignUpFormData) => {
     try {
-      const response = await axios.post('http://localhost:4000/auth/register', {
+      const response = await axiosClient.post('/auth/register', {
         fullname: data.fullname,
         email: data.email,
         password: data.password,
       });
 
+      // Token'ı cookie'ye setlemek için
       const { access_token } = response.data;
 
       if (access_token) {
-        localStorage.setItem('access_token', access_token);
-        setUser(data.email);
+        Cookies.set('access_token', access_token, { expires: 1 });
+        setUserId(response.data.id);
         router.push('/tasks');
+        toast({
+          // Başarılı kayıt bildirim
+          title: 'Account Created',
+          description: 'Your account has been created successfully.',
+        });
       } else {
         throw new Error('Token not received');
       }

@@ -26,8 +26,9 @@ export class TasksController {
   }
 
   @Delete(':id')
-  async deleteTask(@Param('id') taskId: number): Promise<void> {
-    return this.tasksService.deleteTask(taskId);
+  async deleteTask(@Param('id') taskId: number, @Request() req): Promise<void> {
+    const userId = req.user.userId; // Kullanıcı ID'sini al
+    return this.tasksService.deleteTask(taskId, userId); // Kullanıcı ID'sini geç
   }
 
   @Get()

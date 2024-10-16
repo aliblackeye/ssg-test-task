@@ -8,10 +8,12 @@ import {
   Request,
   ConflictException,
   InternalServerErrorException,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '@/users/users.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Response } from 'express'; // Express Response import edildi
 
 @Controller('auth')
 export class AuthController {
@@ -45,7 +47,10 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: { email: string; password: string }) {
+  async login(
+    @Body() loginDto: { email: string; password: string },
+    @Res() res: Response,
+  ) {
     const user = await this.authService.validateUser(
       loginDto.email,
       loginDto.password,
@@ -55,13 +60,33 @@ export class AuthController {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.authService.login(user);
+    const { access_token } = await this.authService.login(user);
+
+    // Token'ı cookie'ye yaz
+    res.cookie('access_token', access_token, {
+      httpOnly: true, // Sadece HTTP istekleri için erişilebilir
+      secure: process.env.NODE_ENV === 'production', // Sadece HTTPS üzerinden erişilebilir
+      maxAge: 60 * 60 * 1000, // 1 saat geçerlilik süresi
+      sameSite: 'lax', // Cookie'nin aynı site politikası
+    });
+
+    return res.send({ message: 'Login successful' });
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Request() req) {
+    console.log('Authenticated user:', req.user); // Hata ayıklama için log ekledik
+    if (!req.user) {
+      console.error('User not authenticated'); // Hata logu
+      throw new UnauthorizedException('User not authenticated'); // Kullanıcı doğrulanmadıysa hata fırlat
+    }
+
     const user = await this.usersService.findByEmail(req.user.email);
+    if (!user) {
+      console.error('User not found:', req.user.email); // Hata logu
+      throw new InternalServerErrorException('User not found'); // Kullanıcı bulunamazsa hata fırlat
+    }
 
     const { password, ...rest } = user;
     return rest;

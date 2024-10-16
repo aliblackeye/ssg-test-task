@@ -4,11 +4,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for all origins
+  // CORS ayarlarını güncelle
   app.enableCors({
-    origin: '*', // Allow any origin
+    origin: 'http://localhost:3000', // İstemcinin bulunduğu URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    credentials: true, // Cookie'lerin gönderilmesine izin ver
   });
 
   await app.listen(process.env.PORT || 4000);

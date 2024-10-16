@@ -42,6 +42,15 @@ function MultiSelect({
     onChange(selected.filter((i) => i !== item));
   };
 
+  const handleSelect = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((item) => item !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+    setOpen(false); // Seçim yapıldığında popover'ı kapat
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen} {...props}>
       <PopoverTrigger asChild>
@@ -86,12 +95,7 @@ function MultiSelect({
                 <CommandItem
                   key={option.value}
                   onSelect={() => {
-                    onChange(
-                      selected.includes(option.value)
-                        ? selected.filter((item) => item !== option.value)
-                        : [...selected, option.value],
-                    );
-                    setOpen(false); // Seçim yapıldığında popover'ı kapat
+                    handleSelect(option.value);
                   }}
                 >
                   <Check

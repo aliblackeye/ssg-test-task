@@ -59,8 +59,27 @@ export class TasksService {
     };
   }
 
-  async deleteTask(taskId: number): Promise<void> {
+  async deleteTask(taskId: number, userId: number): Promise<void> {
     const sql = this.dbService.sql;
+
+    // Görev sahiplerini kontrol et
+    const owners = await sql`
+      SELECT
+        user_id
+      FROM
+        task_owners
+      WHERE
+        task_id = ${taskId}
+    `;
+
+    const ownerIds = owners.map((owner) => owner.user_id);
+
+    // Eğer kullanıcı görev sahibi değilse hata fırlat
+    if (!ownerIds.includes(userId)) {
+      throw new Error('You do not have permission to delete this task.');
+    }
+
+    // Görevi sil
     await sql`
       DELETE FROM task
       WHERE

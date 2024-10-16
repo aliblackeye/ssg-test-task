@@ -1,6 +1,5 @@
 import { FunctionComponent, PropsWithChildren } from 'react';
 import { useAuthContext } from '@/context/auth-context';
-import { USER_APP_ROUTES } from '@/routing/routes';
 import { useRoute } from '@/routing/useRoute';
 import { SignIn } from '@/components/sign-in';
 
@@ -11,7 +10,7 @@ export const AppSignInView: FunctionComponent<
 > = ({}) => {
   const { user } = useAuthContext();
 
-  useRoute(USER_APP_ROUTES, {
+  useRoute({
     redirect: {
       onCondition: !!user,
       toDefaultAuthenticatedPath: true,
@@ -19,10 +18,7 @@ export const AppSignInView: FunctionComponent<
   });
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <h2 className="text-3xl font-bold text-center mb-4">
-        Sign in to your account
-      </h2>
+    <div className="min-h-screen bg-gray-100 flex flex-col justify-center sm:px-6 lg:px-8">
       <SignIn />
     </div>
   );

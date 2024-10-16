@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import axiosClient from '@/utils/axiosClient';
 
 interface SignInFormData {
   email: string;
@@ -23,30 +24,25 @@ interface SignInFormData {
 
 export const SignIn = () => {
   const { register, handleSubmit } = useForm<SignInFormData>();
-  const { setUser } = useAuthContext();
-  const [error, setError] = useState('');
+  const { setUserId } = useAuthContext();
+  const [error] = useState('');
   const router = useRouter();
 
   const onSubmit = async (data: SignInFormData) => {
     try {
-      const response = await axios.post('http://localhost:4000/auth/login', {
+      const response = await axiosClient.post('/auth/login', {
         email: data.email,
         password: data.password,
       });
 
-      const { access_token } = response.data;
+      console.log('API Response:', response.data); // Yanıtı konsola yazdır
 
-      if (access_token) {
-        localStorage.setItem('access_token', access_token);
-        setUser(response.data);
-        router.push('/');
-        router.reload();
-      } else {
-        throw new Error('No access token received');
-      }
+      // Eğer backend cookie'yi ayarlıyorsa, burada başka bir işlem yapmanıza gerek yok
+      setUserId(response.data.id); // Kullanıcıyı ayarlayın
+      router.push('/');
+      router.reload();
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Invalid credentials');
+      // Hata yakalama kodu
     }
   };
 

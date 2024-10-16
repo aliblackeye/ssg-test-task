@@ -9,13 +9,19 @@ interface RouteOptions {
   };
 }
 
-export const useRoute = (routes: any, options: RouteOptions) => {
+export const useRoute = (options: RouteOptions) => {
   const router = useRouter();
-  const { user } = useAuthContext();
+  const { userId } = useAuthContext();
 
   useEffect(() => {
-    if (options.redirect.onCondition && user) {
-      router.push('/tasks'); // Giriş yapmış kullanıcıyı tasks sayfasına yönlendiriyoruz
+    if (options && options.redirect.onCondition && userId) {
+      if (options.redirect.toDefaultAuthenticatedPath) {
+        router.push('/'); // Varsayılan yönlendirme yolu
+      }
     }
-  }, [user, options.redirect.onCondition, router]);
+
+    if (options && !options.redirect.onCondition && !userId) {
+      router.push('/sign-in'); // Giriş yapmamış kullanıcıyı sign-in sayfasına yönlendiriyoruz
+    }
+  }, [userId, options, router]);
 };

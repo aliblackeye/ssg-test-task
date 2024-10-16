@@ -4,8 +4,8 @@ import {
   getCoreRowModel,
   flexRender,
 } from '@tanstack/react-table';
-import axios from 'axios';
-import { useState } from 'react';
+import axiosClient from '@/utils/axiosClient'; // Axios istemcisini import ettik
+import { useState, useEffect, useCallback } from 'react';
 import TaskForm from '@/components/task-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,96 +41,66 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import Cookies from 'js-cookie'; // js-cookie kütüphanesini ekleyin
+import { useRouter } from 'next/router';
+import { useAuthContext } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast'; // useToast hook'unu import ettik
 
 interface Task {
   id: number;
   description: string;
   completed: boolean;
-  owners: { fullname: string }[];
+  owners: { id: number; fullname: string }[];
 }
 
-interface TaskListProps {
-  tasks: Task[];
-  fetchTasks: () => void; // fetchTasks prop'u
-  currentUserId: number; // Mevcut kullanıcı ID'sini prop olarak al
-}
-
-export const TaskList = ({
-  tasks,
-  fetchTasks,
-  currentUserId,
-}: TaskListProps) => {
+export const TaskList = () => {
+  const { userId } = useAuthContext(); // Kullanıcı ID'sini AuthContext'ten al
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const columns: ColumnDef<Task>[] = [
-    {
-      accessorKey: 'completed',
-      header: 'Completed',
-      cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.original.completed}
-          onChange={() =>
-            handleToggleComplete(row.original.id, !row.original.completed)
-          }
-        />
-      ),
-    },
-    {
-      accessorKey: 'description',
-      header: 'Description',
-    },
-    {
-      accessorKey: 'owners',
-      header: 'Owners',
-      cell: ({ row }) =>
-        row.original.owners.map((owner) => owner.fullname).join(', '),
-    },
-  ];
+  const [showOwnedOnly, setShowOwnedOnly] = useState(false); // Checkbox durumu
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const router = useRouter();
+  const { toast } = useToast(); // Toast fonksiyonunu al
 
-  const table = useReactTable({
-    data: tasks,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  // Task'ları backend'den çek
+  const fetchTasks = useCallback(
+    async (my?: boolean) => {
+      try {
+        const response = await axiosClient.get('tasks' + (my ? '/my' : ''));
+        setTasks(response.data); // Görevleri güncelle
+      } catch (error: any) {
+        console.error('Task listesi alınamadı:', error);
+        if (error.response.status === 401) {
+          router.push('/sign-in');
+        }
+      }
+    },
+    [router],
+  );
 
   const handleDelete = async (taskId: number) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.delete(`http://localhost:4000/tasks/${taskId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axiosClient.delete(`tasks/${taskId}`);
       console.log(`Task with id ${taskId} deleted successfully.`);
-      fetchTasks(); // Listeyi güncelle
+      fetchTasks();
+      toast({
+        // Silme başarılı bildirim
+        title: 'Task Deleted',
+        description: 'Your task has been deleted successfully.',
+      });
     } catch (error) {
       console.error(`Failed to delete task with id ${taskId}:`, error);
     }
   };
 
-  const handleToggleComplete = async (taskId: number, completed: boolean) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      await axios.patch(
-        `http://localhost:4000/tasks/${taskId}/status`,
-        { completed },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      console.log(`Task with id ${taskId} status updated to ${completed}.`);
-      fetchTasks(); // Durum güncellendikten sonra listeyi güncelle
-    } catch (error) {
-      console.error(`Failed to update task status for id ${taskId}:`, error);
-    }
-  };
+  // Bileşen yüklendiğinde görevleri fetchle
+  useEffect(() => {
+    fetchTasks(); // Görevleri al
+  }, [fetchTasks]);
 
   return (
     <div className="bg-white text-center mx-auto max-w-[800px] h-screen flex flex-col justify-center">
       <h2 className="text-4xl font-bold mb-4">TASKS</h2>
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between mb-4">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger>
             <Button variant={'default'} onClick={() => setIsDialogOpen(true)}>
@@ -143,76 +113,71 @@ export const TaskList = ({
             </DialogHeader>
             <TaskForm
               onTaskCreated={() => {
-                fetchTasks(); // Görev oluşturulduktan sonra listeyi güncelle
+                fetchTasks(showOwnedOnly); // Görev oluşturulduktan sonra listeyi güncelle
                 setIsDialogOpen(false); // Dialogu kapat
               }}
-              currentUserId={currentUserId} // Mevcut kullanıcı ID'sini geç
             />
           </DialogContent>
         </Dialog>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={showOwnedOnly}
+            onChange={() => {
+              setShowOwnedOnly(!showOwnedOnly);
+              fetchTasks(!showOwnedOnly); // Checkbox durumu değiştiğinde görevleri yeniden yükle
+            }}
+            className="mr-2"
+          />
+          <label>Show owned only by me</label>
+        </div>
       </div>
       {tasks.length === 0 ? (
         <p className="text-gray-500">No tasks available.</p>
       ) : (
         <div className="border-2 border-gray-300 rounded-lg overflow-clip">
           <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
+            <TableHeader>{/* Header rendering */}</TableHeader>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="text-left">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+              {tasks.map((task) => (
+                <TableRow key={task.id}>
+                  <TableCell>{task.description}</TableCell>
                   <TableCell>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon">
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Are you absolutely sure?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will
-                                  permanently delete the task.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => {
-                                    handleDelete(row.original.id);
-                                  }}
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          {task.owners.some((owner) => owner.id === userId) ? ( // Kullanıcı ID'si kontrolü
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon">
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Are you absolutely sure?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will
+                                    permanently delete the task.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => {
+                                      handleDelete(task.id);
+                                    }}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : (
+                            <span className="text-gray-500">No permission</span> // Yetki yoksa mesaj göster
+                          )}
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Delete Task</p>

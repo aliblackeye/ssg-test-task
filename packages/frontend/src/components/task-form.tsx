@@ -3,8 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import axios from 'axios';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MultiSelect, OptionType } from '@/components/ui/multi-select'; // MultiSelect bileşenini import ettik
 import { Button } from './ui/button';
 import {
@@ -16,21 +15,25 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input'; // Shadcn'den gelen Input bileşenini import ettik
+import axiosClient from '@/utils/axiosClient'; // Axios istemcisini import ettik
+import { useToast } from '@/hooks/use-toast'; // useToast hook'unu import ettik
 
 // Zod ile form şeması tanımlama
 const formSchema = z.object({
-  description: z.string().min(1, { message: 'Description is required.' }), // Zorunlu alan
+  description: z.string().min(1, { message: 'Task description is required.' }), // Zorunlu alan
   owners: z
-    .array(z.string())
-    .min(1, { message: 'At least one owner must be selected.' }), // Zorunlu alan
+    .array(z.number()) // owners alanını number olarak güncelledik
+    .min(1, { message: 'At least one owner must be selected.' }) // Zorunlu alan
+    .refine((owners) => owners.every((owner) => owner !== null), {
+      message: 'Selected owners cannot be empty.',
+    }), // Boş seçim kontrolü
 });
 
 interface TaskFormProps {
   onTaskCreated: () => void;
-  currentUserId: number; // Mevcut kullanıcı ID'sini prop olarak al
 }
 
-const TaskForm = ({ onTaskCreated, currentUserId }: TaskFormProps) => {
+const TaskForm = ({ onTaskCreated }: TaskFormProps) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,44 +45,48 @@ const TaskForm = ({ onTaskCreated, currentUserId }: TaskFormProps) => {
   const { handleSubmit, reset, control } = form;
   const [users, setUsers] = useState<OptionType[]>([]); // Kullanıcıları saklamak için state
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await axiosClient.get('/users');
+      // Kullanıcı verilerini uygun formata dönüştür
+      const formattedUsers = response.data.map((user: any) => ({
+        value: user.id, // Seçenek değeri
+        label: user.fullname, // Seçenek etiketi
+      }));
+      console.log('Kullanıcılar:', formattedUsers);
+      setUsers(formattedUsers); // Kullanıcıları state'e ata
+    } catch (error) {
+      console.error('Kullanıcı listesi alınamadı', error);
+    }
+  }, []);
+
   // Kullanıcıları backend'den çek
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get('http://localhost:4000/users');
-        const userOptions = response.data
-          .filter((user: any) => user.id !== currentUserId) // Kendi ID'mizi filtrele
-          .map((user: any) => ({
-            value: user.id.toString(), // ID'yi string olarak saklıyoruz
-            label: user.email,
-          }));
-        setUsers(userOptions);
-      } catch (error) {
-        console.error('Kullanıcı listesi alınamadı', error);
-      }
-    };
     fetchUsers();
-  }, [currentUserId]);
+  }, [fetchUsers]);
+
+  const { toast } = useToast(); // Toast fonksiyonunu al
 
   const onSubmit = async (data: any) => {
+    console.log('Form Verileri:', data); // Form verilerini kontrol et
+    // owners alanının boş olup olmadığını kontrol et
+    if (!data.owners || data.owners.length === 0) {
+      console.error('Owners alanı boş!'); // Hata mesajı
+      return; // Formu gönderme
+    }
     try {
-      const token = localStorage.getItem('access_token'); // Token'ı localStorage'dan al
-
-      await axios.post(
-        'http://localhost:4000/tasks/create',
-        {
-          description: data.description,
-          ownerIds: data.owners.map(Number), // Seçilen kullanıcıları number olarak atıyoruz
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Header'a token'ı ekle
-          },
-        },
-      );
+      await axiosClient.post('/tasks/create', {
+        description: data.description,
+        ownerIds: data.owners.map(Number), // Seçilen kullanıcıları number olarak atıyoruz
+      });
 
       reset();
-      onTaskCreated(); // Task oluşturulduktan sonra task'ları tekrar getir
+      onTaskCreated();
+      toast({
+        // Başarılı bildirim
+        title: 'Task Created',
+        description: 'Your task has been created successfully.',
+      });
     } catch (error) {
       console.error('Task oluşturulamadı', error);
     }
@@ -87,10 +94,7 @@ const TaskForm = ({ onTaskCreated, currentUserId }: TaskFormProps) => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4"
-      >
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4">
           <FormField
             control={control}
@@ -101,7 +105,11 @@ const TaskForm = ({ onTaskCreated, currentUserId }: TaskFormProps) => {
                   Task Description <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter task description" />
+                  <Input
+                    id="description"
+                    {...field}
+                    placeholder="Enter task description"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,11 +127,12 @@ const TaskForm = ({ onTaskCreated, currentUserId }: TaskFormProps) => {
                   Assign Owners <span className="text-red-500">*</span>
                 </FormLabel>
                 <MultiSelect
+                  {...field}
                   options={users} // Kullanıcıları seçenek olarak veriyoruz
                   selected={field.value || []} // Seçilen sahipleri register ile bağlıyoruz
                   onChange={(value) => {
-                    // Seçim değiştiğinde form değerini güncelliyoruz
-                    field.onChange(value);
+                    console.log('Seçilen Değerler:', value); // Seçilen değerleri kontrol et
+                    field.onChange(value); // Seçim değiştiğinde form değerini güncelliyoruz
                   }}
                   className="w-full"
                 />
